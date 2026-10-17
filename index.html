@@ -828,7 +828,7 @@
             </button>
         </div>
 
-        <div id="app-version" style="margin-top: 14px; font-size: 12px; color: #94a3b8; text-align: center;">גרסה 90</div>
+        <div id="app-version" style="margin-top: 14px; font-size: 12px; color: #94a3b8; text-align: center;">גרסה 91</div>
 
         <div id="install-box" class="install-box hidden">
             <button type="button" id="install-btn" class="btn-install">📲 התקן את האפליקציה</button>
@@ -4610,6 +4610,15 @@
         document.getElementById('weekly-rows').insertAdjacentHTML('beforeend', weeklyRowHtml(newWeeklyRow()));
     };
 
+    // התאמת שם אולם ישן בתבנית לשם הנוכחי של אולם קיים (למשל "מרכז קהילתי משגב" -> "אולם מרכז קהילתי משגב")
+    function matchVenueName(name) {
+        const n = decodeHtmlEntities(name || '');
+        if (!n || n === 'משחק חוץ' || venuesData.some(v => v.name === n)) return n;
+        const nn = normName(n);
+        const hit = venuesData.find(v => { const vn = normName(v.name); return vn && nn && (vn.includes(nn) || nn.includes(vn)); });
+        return hit ? hit.name : n;
+    }
+
     window.openWeeklyAddModal = async function() {
         const team = decodeHtmlEntities(document.getElementById('schedule-filter-team').value);
         if (!team) {
@@ -4619,7 +4628,7 @@
         const w = getWeekRanges();
         document.getElementById('weekly-team-label').innerText = team;
         document.getElementById('weekly-range-label').innerText = `${formatDate(w.nextStart).slice(0, 5)} - ${formatDate(w.nextEnd).slice(0, 5)}`;
-        const rows = loadTemplate(team);
+        const rows = loadTemplate(team).map(r => ({ ...r, venueName: matchVenueName(r.venueName) }));
         document.getElementById('weekly-rows').innerHTML = (rows.length ? rows : [newWeeklyRow()]).map(weeklyRowHtml).join('');
         document.getElementById('weekly-modal').classList.remove('hidden');
     };
@@ -4682,7 +4691,8 @@
         for (const r of rows) {
             const date = dateOf(r.day);
             const label = `${getDayOfWeek(date)} ${r.start}-${r.end}`;
-            const dup = pool.find(s => s.team === team && s.date === date && s.startTime === r.start && s.endTime === r.end && (s.venueName || '') === r.venueName);
+            // כפילות: לקבוצה כבר יש אירוע באותו תאריך בשעות חופפות (בלי קשר לשם האולם, כי השם בתבנית יכול להיות ישן)
+            const dup = pool.find(s => s.team === team && s.date === date && r.start < s.endTime && r.end > s.startTime);
             if (dup) { skipped.push(`${label} - כבר קיים`); continue; }
             if (r.venueName !== 'משחק חוץ') {
                 const c = pool.find(s => s.date === date && s.venueName === r.venueName && r.start < s.endTime && r.end > s.startTime);
