@@ -686,6 +686,14 @@
             white-space: nowrap; box-shadow: 0 4px 10px color-mix(in srgb, var(--primary-2) 28%, transparent);
         }
         .btn-add:active { transform: scale(0.97); }
+        table.sched-table { table-layout: fixed; width: 100%; font-size: 13px; }
+        table.sched-table th, table.sched-table td { padding: 8px 4px; overflow-wrap: anywhere; word-break: break-word; }
+        table.sched-table th:last-child, table.sched-table td:last-child { width: 58px; white-space: normal; text-align: center; }
+        table.sched-table .btn-edit-blue { padding: 6px 8px; }
+        table.sched-table .sched-hours { text-align: center; font-weight: 700; line-height: 1.5; }
+        .toolbar-compact { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .toolbar-compact .btn-add { width: 100%; padding: 10px 8px; font-size: 14px; text-align: center; }
+        .toolbar-compact .super-only { grid-column: 1 / -1; }
         .modal-form-card { max-width: 560px; }
         .modal-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; }
         .modal-head .modal-title { margin-bottom: 0; }
@@ -721,6 +729,8 @@
         tbody tr.game-past td { opacity: .55; }
         tbody tr.snack-mine td { background: #fef9c3 !important; }
         .snack-badge { display: inline-block; background: #fde047; color: #713f12; border-radius: 6px; padding: 1px 8px; font-size: 12px; font-weight: 700; margin-top: 4px; }
+        .snack-cnt { font-size: 11px; font-weight: 700; color: #166534; background: #dcfce7; border-radius: 6px; padding: 1px 6px; }
+        .snack-cnt-high { color: #92400e; background: #fef3c7; }
         .snack-names { font-size: 13px; line-height: 1.5; }
         .chg-old { display: inline-block; text-decoration: line-through; color: #94a3b8; font-size: 12px; font-weight: 500; }
         .chg-badge { display: inline-block; background: #fee2e2; color: #b91c1c; border-radius: 6px; padding: 1px 8px; font-size: 12px; font-weight: 700; margin-top: 4px; }
@@ -818,7 +828,7 @@
             </button>
         </div>
 
-        <div id="app-version" style="margin-top: 14px; font-size: 12px; color: #94a3b8; text-align: center;">גרסה 81</div>
+        <div id="app-version" style="margin-top: 14px; font-size: 12px; color: #94a3b8; text-align: center;">גרסה 90</div>
 
         <div id="install-box" class="install-box hidden">
             <button type="button" id="install-btn" class="btn-install">📲 התקן את האפליקציה</button>
@@ -998,7 +1008,7 @@
                     <button type="button" class="btn-add" onclick="openWeeklyAddModal()">🔁 הוסף אימונים שבועיים</button>
                     <button type="button" class="btn-add" onclick="openFormModal('schedule-modal')">➕ הוסף אירוע</button>
                 </div>
-                <div class="toolbar">
+                <div class="toolbar hidden super-only">
                     <button type="button" class="btn-add" style="background: linear-gradient(135deg, #0d9488, #10b981);" onclick="openFormModal('excel-games-modal')">📊 ייבוא משחקים מקובץ Excel</button>
                 </div>
                 <div class="toolbar">
@@ -1017,7 +1027,8 @@
                     </select>
                 </div>
                 <div class="table-responsive">
-                    <table class="compact-table">
+                    <table class="compact-table sched-table">
+                        <colgroup><col style="width:22%"><col style="width:54px"><col><col style="width:58px"></colgroup>
                         <thead>
                             <tr>
                                 <th>תאריך</th>
@@ -1030,7 +1041,7 @@
                     </table>
                 </div>
                 <!-- כפתור למחיקת כל המשחקים לקבוצה שנבחרה -->
-                <div style="margin-top: 25px; border-top: 1px dashed var(--border); padding-top: 15px;">
+                <div class="hidden super-only" style="margin-top: 25px; border-top: 1px dashed var(--border); padding-top: 15px;">
                     <button type="button" class="btn-delete-full" onclick="deleteAllGamesForSelectedTeam()">🗑️ מחק את כל המשחקים לקבוצה זו</button>
                 </div>
             </div>
@@ -1039,9 +1050,12 @@
         <div id="view-games" class="hidden">
             <div class="card">
                 <h2>משחקים וכיבוד</h2>
-                <div class="toolbar">
+                <div class="toolbar toolbar-compact">
                     <button type="button" class="btn-add" onclick="openFormModal('game-modal')">➕ הוסף משחק</button>
-                    <button type="button" class="btn-add" style="background: linear-gradient(135deg, #0d9488, #10b981);" onclick="openFormModal('excel-games-modal')">📊 ייבוא משחקים מקובץ Excel</button>
+                    <button type="button" class="btn-add" onclick="autoAssignSnacks()">🍕 שבץ הורים</button>
+                    <button type="button" class="btn-add" onclick="openSnackReport()">📋 דוח כיבוד</button>
+                    <button type="button" class="btn-add" style="background: linear-gradient(135deg, #b91c1c, #dc2626);" onclick="clearSnackAssignments()">🧹 בטל שיבוץ</button>
+                    <button type="button" class="btn-add hidden super-only" style="background: linear-gradient(135deg, #0d9488, #10b981);" onclick="openFormModal('excel-games-modal')">📊 ייבוא משחקים מקובץ Excel</button>
                 </div>
                 <div class="form-group filter-row" style="margin-top: 15px;">
                     <label>קבוצה</label>
@@ -1069,7 +1083,7 @@
                     <h2>רשימת שחקנים</h2>
                     <div class="toolbar" style="gap: 8px;">
                         <button type="button" class="btn-add" onclick="openFormModal('player-modal')">➕ הוסף שחקן</button>
-                        <button type="button" class="btn-add" style="background: linear-gradient(135deg, #0d9488, #10b981);" onclick="openFormModal('pdf-import-modal')">📥 ייבוא שחקנים מהיר מ-PDF</button>
+                        <button type="button" class="btn-add hidden super-only" style="background: linear-gradient(135deg, #0d9488, #10b981);" onclick="openFormModal('pdf-import-modal')">📥 ייבוא שחקנים מהיר מ-PDF</button>
                     </div>
                     <div class="form-group filter-row">
                         <label>קבוצה</label>
@@ -1088,7 +1102,7 @@
                         </table>
                     </div>
                     <!-- כפתור למחיקת כל השחקנים לקבוצה שנבחרה -->
-                    <div style="margin-top: 25px; border-top: 1px dashed var(--border); padding-top: 15px;">
+                    <div class="hidden super-only" style="margin-top: 25px; border-top: 1px dashed var(--border); padding-top: 15px;">
                         <button type="button" class="btn-delete-full" onclick="deleteAllPlayersForSelectedTeam()">🗑️ מחק את כל השחקנים לקבוצה זו</button>
                     </div>
                 </div>
@@ -1516,6 +1530,19 @@
     </div>
 </div>
 
+<div id="snack-report-modal" class="modal-overlay hidden" style="padding: 10px;">
+    <div class="modal-card modal-card-large" style="padding: 16px;">
+        <div class="modal-title" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border); padding-bottom: 10px;">
+            <span id="snack-report-title">🍕 דוח כיבוד</span>
+            <button type="button" onclick="closeSnackReport()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #64748b;" aria-label="סגור">✕</button>
+        </div>
+        <div id="snack-report-body" class="modal-body" style="padding-top: 12px; white-space: normal;"></div>
+        <div class="modal-actions" style="border-top: 1px solid var(--border); padding-top: 10px;">
+            <button type="button" onclick="closeSnackReport()" class="modal-btn modal-btn-secondary">סגור</button>
+        </div>
+    </div>
+</div>
+
 <div id="calendar-modal" class="modal-overlay hidden">
     <div class="modal-card modal-form-card">
         <div class="modal-head">
@@ -1583,6 +1610,7 @@
             </div>
             <div class="form-group" style="margin-top: 15px;">
                 <label>הורים שמביאים כיבוד (סמן את השחקנים שהוריהם מביאים)</label>
+                <div class="fin-note" style="margin:0 0 4px;">ליד כל שם מופיע כמה פעמים כבר שובץ בכיבוד במשחקים אחרים. אפשר לצרף להורה ששובץ כבר כמה פעמים הורה נוסף ששובץ פחות, כדי להפחית לו את העלות.</div>
                 <div id="game-snack-box" class="check-grid"></div>
             </div>
             <div class="form-group" style="margin-top: 15px;">
@@ -1804,6 +1832,7 @@
     };
 
     window.openFormModal = function(id) {
+        if ((id === 'excel-games-modal' || id === 'pdf-import-modal') && !isSuperUser()) return;
         const reset = FORM_RESETS[id];
         if (reset) reset();
         if (id === 'schedule-modal') {
@@ -1996,6 +2025,7 @@
     }
 
     window.processExcelGamesImport = async function() {
+        if (!isSuperUser()) return;
         const team = document.getElementById('excel-import-team-select').value;
         const fileInput = document.getElementById('excel-file-input');
         if (!team) {
@@ -2189,6 +2219,7 @@
     };
 
     window.processPdfPlayersImport = async function() {
+        if (!isSuperUser()) return;
         const team = document.getElementById('pdf-import-team-select').value;
         const rawText = decodeHtmlEntities(document.getElementById('pdf-raw-text').value.trim());
 
@@ -2433,6 +2464,7 @@
     }
 
     window.deleteAllGamesForSelectedTeam = async function() {
+        if (!isSuperUser()) return;
         const teamSelect = document.getElementById('schedule-filter-team');
         const selectedTeam = teamSelect ? teamSelect.value : '';
         if (!selectedTeam) {
@@ -2470,6 +2502,7 @@
     };
 
     window.deleteAllPlayersForSelectedTeam = async function() {
+        if (!isSuperUser()) return;
         const teamSelect = document.getElementById('player-filter-team');
         const selectedTeam = teamSelect ? teamSelect.value : '';
 
@@ -2977,6 +3010,8 @@
     }
 
     function applyRoleUI() {
+        // ייבוא Excel / PDF ומחיקה מרוכזת של משחקים / שחקנים: רק לסופר אדמין
+        document.querySelectorAll('.super-only').forEach(el => el.classList.toggle('hidden', !isSuperUser()));
         document.querySelector('header nav').classList.toggle('nav-single', currentUserRole === 'player');
         const sw = document.getElementById('switch-club-btn');
         const showSwitch = currentLoggedInPhone ? myClubs.length > 1 : (loginMode === 'admin' ? (canCreateClubs || myClubs.filter(c => c.memberRole === 'admin').length > 1) : myClubs.filter(c => c.memberRole === 'coach').length > 1);
@@ -3947,6 +3982,172 @@
 
     const sortGames = (list) => [...list].sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
 
+    // שיבוץ אוטומטי של הורים לכיבוד: כל שחקן (ההורים שלו) משובץ פעם אחת בלבד, פיזור שווה על פני המשחקים העתידיים
+    window.autoAssignSnacks = async function() {
+        const sel = document.getElementById('games-filter-team');
+        const team = decodeHtmlEntities(sel ? sel.value : '');
+        if (!team) { await showAlert('יש לבחור קבוצה תחילה.', 'שגיאה'); return; }
+        const today = ymd(new Date());
+        const upcoming = sortGames(gamesData.filter(g => g.team === team && g.date && g.date >= today));
+        const players = playersData.filter(p => p.team === team)
+            .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, 'he'));
+        if (!upcoming.length) { await showAlert(`אין משחקים עתידיים לקבוצה "${team}".`, 'אין משחקים'); return; }
+        if (!players.length) { await showAlert(`אין שחקנים רשומים בקבוצה "${team}".`, 'אין שחקנים'); return; }
+        const targets = upcoming.filter(g => !(g.snackParents || []).length);
+        if (!targets.length) { await showAlert('לכל המשחקים העתידיים כבר שובצו הורים לכיבוד.', 'אין מה לשבץ'); return; }
+
+        const used = new Set();
+        upcoming.forEach(g => (g.snackParents || []).forEach(x => used.add(x.id)));
+        const shuffle = (a) => { const r = [...a]; for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; };
+        const free = players.filter(p => !used.has(p.id));
+        let queue = shuffle(free.length ? free : players);
+        const T = targets.length;
+        const repeats = queue.length < T;
+
+        const ok = await showConfirm(`לשבץ אוטומטית את ההורים של ${players.length} שחקנים ב-${T} משחקים עתידיים של "${team}"?\n` +
+            (repeats ? `יש יותר משחקים משחקנים, ולכן אחרי ששובצו כל ההורים הסבב יחזור מההתחלה.\n` : 'כל שחקן ישובץ במשחק אחד בלבד, והשיבוץ יתפזר שווה בין המשחקים.\n') +
+            'משחקים שכבר שובצו בהם הורים לא ישונו.', 'שיבוץ כיבוד אוטומטי');
+        if (!ok) return;
+
+        const assign = [];
+        if (!repeats) {
+            const base = Math.floor(queue.length / T), extra = queue.length % T;
+            let k = 0;
+            targets.forEach((g, i) => { const n = base + (i < extra ? 1 : 0); assign.push(queue.slice(k, k + n)); k += n; });
+        } else {
+            targets.forEach(() => { if (!queue.length) queue = shuffle(players); assign.push([queue.shift()]); });
+        }
+
+        try {
+            showToast('משבץ הורים...');
+            for (let i = 0; i < targets.length; i += 400) {
+                const batch = writeBatch(db);
+                targets.slice(i, i + 400).forEach((g, idx) => {
+                    batch.update(cdoc('games', g.id), { snackParents: assign[i + idx].map(p => ({ id: p.id, name: `${p.firstName} ${p.lastName}` })) });
+                });
+                await batch.commit();
+            }
+            await showAlert(`שובצו הורים ב-${T} משחקים.`, 'השיבוץ הושלם');
+        } catch (err) {
+            console.error(err);
+            await showAlert('שגיאה בשיבוץ: ' + err.message, 'שגיאה');
+        }
+    };
+
+    // --- דוח כיבוד: רשימת המשחקים וההורים, סיכום שיבוצים לכל שחקן, והצעות לחלוקה שוויונית יותר ---
+    window.closeSnackReport = function() { document.getElementById('snack-report-modal').classList.add('hidden'); };
+
+    window.openSnackReport = async function() {
+        const sel = document.getElementById('games-filter-team');
+        const team = decodeHtmlEntities(sel ? sel.value : '');
+        if (!team) { await showAlert('יש לבחור קבוצה תחילה.', 'שגיאה'); return; }
+        const today = ymd(new Date());
+        const games = sortGames(gamesData.filter(g => g.team === team));
+        const players = playersData.filter(p => p.team === team)
+            .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, 'he'));
+        const pname = (p) => `${p.firstName} ${p.lastName}`;
+        document.getElementById('snack-report-title').innerText = `🍕 דוח כיבוד - ${team}`;
+        const body = document.getElementById('snack-report-body');
+
+        if (!games.length) {
+            body.innerHTML = '<div style="text-align:center; color:#64748b; padding:20px 0;">טרם הוזנו משחקים לקבוצה זו.</div>';
+            document.getElementById('snack-report-modal').classList.remove('hidden');
+            return;
+        }
+
+        const counts = {};
+        players.forEach(p => { counts[p.id] = 0; });
+        games.forEach(g => (g.snackParents || []).forEach(x => { if (x.id in counts) counts[x.id]++; }));
+        const cntText = (n) => n === 0 ? 'לא שובץ' : (n === 1 ? 'פעם אחת' : (n === 2 ? 'פעמיים' : n + ' פעמים'));
+        const nameOfId = (id) => { const p = players.find(x => x.id === id); return p ? pname(p) : ''; };
+
+        // 1. רשימת המשחקים
+        const gameRows = games.map(g => {
+            const names = (g.snackParents || []).map(x => escHtml(x.name));
+            const away = g.home === 'away';
+            return `<tr class="${g.date < today ? 'game-past' : ''}">
+                <td><strong>${getDayOfWeek(g.date)}</strong><br><span style="font-size:12px; color:#64748b;">${formatDate(g.date).slice(0, 5)}${g.time ? ' · ' + escHtml(g.time) : ''}</span></td>
+                <td>${g.opponent ? 'נגד ' + escHtml(g.opponent) : 'משחק'}<span class="cell-sub">${away ? '✈️ חוץ' : '🏠 בית'}</span></td>
+                <td>${names.length ? names.join(', ') : '<span style="color:#94a3b8; font-size:13px;">טרם שובץ</span>'}</td>
+            </tr>`;
+        }).join('');
+
+        // 2. סיכום לכל שחקן
+        const summary = [...players].sort((a, b) => counts[b.id] - counts[a.id] || pname(a).localeCompare(pname(b), 'he'));
+        const summaryRows = summary.map(p => `<tr><td>${escHtml(pname(p))}</td><td><span class="snack-cnt${counts[p.id] >= 2 ? ' snack-cnt-high' : ''}">${cntText(counts[p.id])}</span></td></tr>`).join('');
+
+        // 3. הצעות לחלוקה שוויונית יותר (רק במשחקים עתידיים - משחקי עבר כבר לא ניתן לשנות)
+        const tips = [];
+        if (players.length) {
+            const vals = () => Object.values(counts);
+            const upcoming = games.filter(g => g.date >= today);
+            const unassigned = upcoming.filter(g => !(g.snackParents || []).length);
+            const gap = Math.max(...vals()) - Math.min(...vals());
+
+            if (unassigned.length) {
+                const low = [...players].sort((a, b) => counts[a.id] - counts[b.id] || pname(a).localeCompare(pname(b), 'he')).slice(0, 5).map(p => `${pname(p)} (${cntText(counts[p.id])})`);
+                tips.push(`${unassigned.length === 1 ? 'במשחק עתידי אחד' : 'ב-' + unassigned.length + ' משחקים עתידיים'} עדיין לא שובצו הורים. כדאי לשבץ בהם קודם את מי ששובץ הכי פחות: ${low.join(', ')}. אפשר גם ללחוץ על "שבץ הורים", שמחלק שווה בין כולם.`);
+            }
+
+            const work = { ...counts };
+            const proposals = [];
+            upcoming.filter(g => (g.snackParents || []).length).forEach(g => {
+                const ids = (g.snackParents || []).map(x => x.id);
+                [...ids].forEach(id => {
+                    if (!(id in work)) return;
+                    const mn = Math.min(...Object.values(work));
+                    if (work[id] - mn < 2) return;
+                    const helper = players.filter(p => !ids.includes(p.id))
+                        .sort((a, b) => work[a.id] - work[b.id] || pname(a).localeCompare(pname(b), 'he'))[0];
+                    if (!helper || work[helper.id] > work[id] - 2) return;
+                    proposals.push(`במשחק ${getDayOfWeek(g.date)} ${formatDate(g.date).slice(0, 5)}${g.opponent ? ' נגד ' + g.opponent : ''}: ${nameOfId(id)} כבר שובץ ${cntText(work[id])}. אפשר לצרף אליו את ${pname(helper)} (${cntText(work[helper.id])}) כדי לחלוק את העלות.`);
+                    work[helper.id]++;
+                    ids.push(helper.id);
+                });
+            });
+            proposals.forEach(t => tips.push(t));
+
+            if (!tips.length) {
+                tips.push(gap <= 1
+                    ? `החלוקה שוויונית: ההפרש בין מי ששובץ הכי הרבה למי ששובץ הכי פחות הוא ${gap === 0 ? 'אפס' : 'פעם אחת'}.`
+                    : `ההפרש בין מי ששובץ הכי הרבה (${Math.max(...vals())} פעמים) למי ששובץ הכי פחות (${Math.min(...vals())}) נובע ממשחקי עבר, ואין משחקים עתידיים משובצים שאפשר לתקן בהם.`);
+            }
+        }
+
+        body.innerHTML = `
+            <div class="modal-section-title">רשימת המשחקים וההורים שמביאים כיבוד</div>
+            <div class="table-responsive" style="margin-top:0;"><table class="compact-table"><thead><tr><th style="width:24%">תאריך</th><th style="width:30%">משחק</th><th>הורים של</th></tr></thead><tbody>${gameRows}</tbody></table></div>
+            <div class="modal-section-title rep-title">כמה פעמים כל שחקן שובץ</div>
+            <div class="table-responsive" style="margin-top:0;"><table class="compact-table"><thead><tr><th>שחקן</th><th>שיבוצים</th></tr></thead><tbody>${summaryRows || '<tr><td colspan="2" style="text-align:center; color:#64748b;">אין שחקנים בקבוצה.</td></tr>'}</tbody></table></div>
+            <div class="modal-section-title rep-title">💡 הצעות לחלוקה שוויונית יותר</div>
+            ${tips.map(t => `<div class="fin-card" style="font-size:13px; line-height:1.6;">${escHtml(t)}</div>`).join('') || '<div class="fin-note">אין שחקנים בקבוצה.</div>'}
+            <div class="fin-note" style="margin-top:8px;">הספירה כוללת את כל משחקי הקבוצה, גם משחקי עבר (מעומעמים בטבלה). ההצעות מתייחסות למשחקים עתידיים בלבד.</div>`;
+        document.getElementById('snack-report-modal').classList.remove('hidden');
+    };
+
+    // ביטול כל שיבוצי הכיבוד במשחקים העתידיים של הקבוצה שנבחרה (משחקי עבר נשארים להיסטוריה)
+    window.clearSnackAssignments = async function() {
+        const sel = document.getElementById('games-filter-team');
+        const team = decodeHtmlEntities(sel ? sel.value : '');
+        if (!team) { await showAlert('יש לבחור קבוצה תחילה.', 'שגיאה'); return; }
+        const today = ymd(new Date());
+        const targets = gamesData.filter(g => g.team === team && g.date && g.date >= today && (g.snackParents || []).length);
+        if (!targets.length) { await showAlert(`אין שיבוצי כיבוד עתידיים לביטול בקבוצה "${team}".`, 'אין שיבוצים'); return; }
+        const ok = await showConfirm(`לבטל את שיבוצי הכיבוד ב-${targets.length} משחקים עתידיים של "${team}"?\nמשחקי עבר לא ישתנו. אפשר לשבץ מחדש בכל רגע.`, 'ביטול שיבוצי כיבוד');
+        if (!ok) return;
+        try {
+            for (let i = 0; i < targets.length; i += 400) {
+                const batch = writeBatch(db);
+                targets.slice(i, i + 400).forEach(g => batch.update(cdoc('games', g.id), { snackParents: [] }));
+                await batch.commit();
+            }
+            showToast('שיבוצי הכיבוד בוטלו');
+        } catch (err) {
+            console.error(err);
+            await showAlert('שגיאה בביטול השיבוצים: ' + err.message, 'שגיאה');
+        }
+    };
+
     window.renderGameSnackChecks = function(selectedIds) {
         const box = document.getElementById('game-snack-box');
         if (!box) return;
@@ -3954,8 +4155,13 @@
         const checked = new Set(selectedIds || Array.from(box.querySelectorAll('input:checked')).map(i => i.value));
         const pls = playersData.filter(p => p.team === team)
             .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, 'he'));
+        // כמה פעמים כל שחקן כבר שובץ בכיבוד במשחקים אחרים של הקבוצה (כולל משחקי עבר)
+        const editId = (document.getElementById('editing-game-id') || {}).value || '';
+        const counts = {};
+        gamesData.filter(g => g.team === team && g.id !== editId).forEach(g => (g.snackParents || []).forEach(x => { counts[x.id] = (counts[x.id] || 0) + 1; }));
+        const cntText = (n) => n === 0 ? 'לא שובץ' : (n === 1 ? 'פעם אחת' : (n === 2 ? 'פעמיים' : n + ' פעמים'));
         box.innerHTML = pls.length
-            ? pls.map(p => `<label class="check-item"><input type="checkbox" value="${escAttr(p.id)}" ${checked.has(p.id) ? 'checked' : ''}> ${escHtml(p.firstName + ' ' + p.lastName)}</label>`).join('')
+            ? pls.map(p => { const n = counts[p.id] || 0; return `<label class="check-item"><input type="checkbox" value="${escAttr(p.id)}" ${checked.has(p.id) ? 'checked' : ''}> ${escHtml(p.firstName + ' ' + p.lastName)} <span class="snack-cnt${n >= 2 ? ' snack-cnt-high' : ''}">${cntText(n)}</span></label>`; }).join('')
             : '<span style="color:#64748b; font-size:13px;">אין שחקנים רשומים בקבוצה זו (ניהול שחקנים ← הוסף שחקן)</span>';
     };
 
@@ -4000,7 +4206,7 @@
         if (!dateCh && !timeCh && !venueCh) return null;
         return {
             date: dateCh ? `<span class="chg-old">${getDayOfWeek(s.prevDate)} ${formatDate(s.prevDate).slice(0, 5)}</span><br>` : '',
-            time: timeCh ? `<span class="chg-old">${escHtml(s.prevStart)}-${escHtml(s.prevEnd)}</span><br>` : '',
+            time: timeCh ? `<span class="chg-old"><span dir="ltr">${escHtml(s.prevStart)}</span><br><span dir="ltr">${escHtml(s.prevEnd)}</span></span><br>` : '',
             venue: venueCh && s.prevVenue ? `<span class="chg-old">${escHtml(s.prevVenue)}</span><br>` : '',
             badge: '<br><span class="chg-badge">🔔 עודכן</span>'
         };
@@ -4509,7 +4715,7 @@
         }
     };
 
-    const APP_URL = 'https://myteam.sportclubs.workers.dev/';
+    const APP_URL = 'https://myteam.sportly.workers.dev/';
 
     window.sendScheduleWhatsApp = function() {
         const team = decodeHtmlEntities((document.getElementById('schedule-filter-team') || {}).value || '');
@@ -4860,8 +5066,8 @@
             const c = scheduleChange(s);
             return `
                 <tr class="${c ? 'row-changed' : ''}">
-                    <td>${c ? c.date : ''}<strong>${getDayOfWeek(s.date)}</strong><br><span style="font-size:12px; color:#64748b;">${formatDate(s.date)}</span>${c ? c.badge : ''}</td>
-                    <td>${c ? c.time : ''}<span style="white-space:nowrap;">${s.startTime}-${s.endTime}</span></td>
+                    <td>${c ? c.date : ''}<strong>${getDayOfWeek(s.date)}</strong><br><span style="font-size:12px; color:#64748b;">${formatDate(s.date).slice(0, 5)}</span>${c ? c.badge : ''}</td>
+                    <td class="sched-hours">${c ? c.time : ''}<span dir="ltr">${s.startTime}</span><br><span dir="ltr">${s.endTime}</span></td>
                     <td>${c ? c.venue : ''}${combinedLocation}${(s.isAway || s.venueName === 'משחק חוץ') ? navLinksHtml(s.address) + transportLineHtml(true, s.needsTransport, s.transportTime) : ''}</td>
                     <td>
                         <button class="btn-edit-blue" onclick="editSchedule('${s.id}')">ערוך</button>
