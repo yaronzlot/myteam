@@ -735,6 +735,13 @@
         .chg-old { display: inline-block; text-decoration: line-through; color: #94a3b8; font-size: 12px; font-weight: 500; }
         .chg-badge { display: inline-block; background: #fee2e2; color: #b91c1c; border-radius: 6px; padding: 1px 8px; font-size: 12px; font-weight: 700; margin-top: 4px; }
         tbody tr.row-changed td { background: #fff7ed !important; }
+        tbody tr.row-cancelled td { background: #fef2f2 !important; color: #7f1d1d; text-decoration: line-through; }
+        .sec-game { cursor: pointer; border: 2px solid var(--border); }
+        .sec-game.sec-selected { border-color: var(--primary-2); background: var(--bg-tint); }
+        .sec-game.sec-past { opacity: .6; }
+        .sec-chip { display: inline-flex; align-items: center; gap: 4px; background: #fde047; color: #713f12; border-radius: 8px; padding: 2px 4px 2px 8px; font-size: 12px; font-weight: 700; margin: 2px 0 0 4px; }
+        .sec-chip button { background: none; border: none; color: #713f12; font-size: 14px; line-height: 1; cursor: pointer; padding: 0 4px; }
+        .cancel-badge { display: inline-block; background: #dc2626; color: #fff; border-radius: 6px; padding: 1px 8px; font-size: 12px; font-weight: 700; margin-top: 4px; text-decoration: none; }
         table { min-width: 0; }
         table.player-table { table-layout: fixed; min-width: 0; font-size: 13px; }
         table.player-table th, table.player-table td { padding: 8px 5px; overflow-wrap: anywhere; word-break: break-word; }
@@ -828,7 +835,7 @@
             </button>
         </div>
 
-        <div id="app-version" style="margin-top: 14px; font-size: 12px; color: #94a3b8; text-align: center;">גרסה 91</div>
+        <div id="app-version" style="margin-top: 14px; font-size: 12px; color: #94a3b8; text-align: center;">גרסה 98</div>
 
         <div id="install-box" class="install-box hidden">
             <button type="button" id="install-btn" class="btn-install">📲 התקן את האפליקציה</button>
@@ -912,6 +919,8 @@
                 <button id="nav-reports" class="hidden" onclick="switchMainTab('reports')">דוח מנהל</button>
                 <button id="nav-player" onclick="switchMainTab('player')">ניהול שחקנים</button>
                 <button id="nav-weekly" class="hidden" onclick="openWeeklyReportModal()">לו"ז שבועי</button>
+                <button id="nav-secretary" class="hidden" onclick="switchMainTab('secretary')">שיבוץ מזכירות</button>
+                <button id="nav-drivers" class="hidden" onclick="switchMainTab('drivers')">הסעות</button>
             </nav>
         </header>
 
@@ -921,6 +930,8 @@
                 <button id="subnav-venues" onclick="switchAdminSubTab('venues')">אולמות / מגרשים</button>
                 <button id="subnav-admins" onclick="switchAdminSubTab('admins')">מנהלים</button>
                 <button id="subnav-coaches" onclick="switchAdminSubTab('coaches')">מאמנים</button>
+                <button id="subnav-drivers" onclick="switchAdminSubTab('drivers')">הסעות</button>
+                <button id="subnav-officials" onclick="switchAdminSubTab('officials')">בעלי תפקידים</button>
             </div>
 
             <div id="admin-sub-teams" class="card">
@@ -986,6 +997,36 @@
                     </table>
                 </div>
             </div>
+
+            <div id="admin-sub-drivers" class="card hidden">
+                <div class="card-head">
+                    <h2>נהגי הסעות</h2>
+                    <button type="button" class="btn-add" onclick="openFormModal('driver-modal')">➕ הוסף נהג</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="compact-table">
+                        <thead>
+                            <tr><th>שם הנהג</th><th>טלפון</th><th>פעולות</th></tr>
+                        </thead>
+                        <tbody id="drivers-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="admin-sub-officials" class="card hidden">
+                <div class="card-head">
+                    <h2>בעלי תפקידים</h2>
+                    <button type="button" class="btn-add" onclick="openFormModal('official-modal')">➕ הוסף בעל תפקיד</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="compact-table">
+                        <thead>
+                            <tr><th>שם</th><th>תפקיד</th><th>טלפון</th><th>פעולות</th></tr>
+                        </thead>
+                        <tbody id="officials-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <div id="view-reports" class="hidden">
@@ -998,6 +1039,62 @@
                     </div>
                 </div>
                 <div id="report-content"></div>
+            </div>
+        </div>
+
+        <div id="view-secretary" class="hidden">
+            <div class="card">
+                <h2>שיבוץ מזכירות משחקי בית</h2>
+                <div class="form-group filter-row">
+                    <label>קבוצה</label>
+                    <select id="sec-team" onchange="secTeamChanged()"></select>
+                </div>
+                <div class="fin-note">משחקי הבית של הקבוצה. לחץ על משחק כדי לשבץ לו מזכירות מהרשימה שמתחת.</div>
+                <div id="sec-games"></div>
+            </div>
+            <div class="card">
+                <h2>שחקנים לשיבוץ</h2>
+                <div id="sec-players-hint" class="fin-note"></div>
+                <details id="sec-team-filter-box" class="fin-card">
+                    <summary id="sec-team-filter-sum" style="cursor:pointer; font-weight:700; font-size:14px;">סינון קבוצות</summary>
+                    <div class="fin-note" style="margin-top:8px;">קבוצות מסומנות - השחקנים שלהן מוצגים. בטל סימון כדי להסתיר קבוצות קטנות מדי.</div>
+                    <div id="sec-team-filter" class="check-grid"></div>
+                </details>
+                <div class="form-grid" style="margin-bottom:12px;">
+                    <div class="form-group">
+                        <label>חיפוש לפי שם שחקן</label>
+                        <input type="search" id="sec-search" placeholder="הקלד שם" oninput="renderSecretaryPlayers()">
+                    </div>
+                    <div class="form-group">
+                        <label>הצג</label>
+                        <select id="sec-filter" onchange="renderSecretaryPlayers()">
+                            <option value="all">כל השחקנים</option>
+                            <option value="assigned">ששובצו למשחק זה</option>
+                            <option value="unassigned">שלא שובצו למשחק זה</option>
+                            <option value="never">שלא שובצו אף פעם</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="compact-table">
+                        <thead><tr><th>שחקן</th><th>שיבוצים</th><th>פעולה</th></tr></thead>
+                        <tbody id="sec-players-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-drivers" class="hidden">
+            <div class="card">
+                <h2>נהגי הסעות</h2>
+                <div class="table-responsive">
+                    <table class="compact-table">
+                        <thead>
+                            <tr><th>שם הנהג</th><th>טלפון</th></tr>
+                        </thead>
+                        <tbody id="drivers-view-body"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -1060,6 +1157,10 @@
                 <div class="form-group filter-row" style="margin-top: 15px;">
                     <label>קבוצה</label>
                     <select id="games-filter-team" onchange="renderGames()"></select>
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label class="check-item"><input type="checkbox" id="snack-full-list" onchange="onSnackFullListChange(this.checked)"> הצג רשימה מלאה לשחקנים/הורים</label>
+                    <div class="fin-note" style="margin:4px 0 0;">מסומן: שחקנים והורים רואים את כל המשחקים הקרובים והשיבוץ לכיבוד. לא מסומן: רק משחקי השבוע הנוכחי והשבוע הבא (שימושי כשהחלוקה בין ההורים עדיין לא שוויונית). ההגדרה נשמרת לכל קבוצה.</div>
                 </div>
                 <div class="table-responsive">
                     <table class="compact-table">
@@ -1372,6 +1473,70 @@
     </div>
 </div>
 
+<div id="driver-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-form-card">
+        <div class="modal-head">
+            <div id="driver-modal-title" class="modal-title">הוספת נהג</div>
+            <button type="button" class="modal-x" onclick="closeFormModal('driver-modal')" aria-label="סגור">✕</button>
+        </div>
+        <form id="driver-form">
+            <input type="hidden" id="editing-driver-id">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>שם הנהג *</label>
+                    <input type="text" id="driverName" required placeholder="ישראל ישראלי">
+                </div>
+                <div class="form-group">
+                    <label>טלפון הנהג *</label>
+                    <input type="tel" id="driverPhone" required placeholder="0500000000" pattern="[0-9]{9,10}">
+                </div>
+            </div>
+            <button type="submit" id="save-driver-btn" class="btn">שמור נהג</button>
+            <button type="button" id="delete-driver-btn" class="btn-delete-full hidden" onclick="deleteDriverFromModal()">🗑️ מחק נהג</button>
+        </form>
+    </div>
+</div>
+
+<div id="official-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-form-card">
+        <div class="modal-head">
+            <div id="official-modal-title" class="modal-title">הוספת בעל תפקיד</div>
+            <button type="button" class="modal-x" onclick="closeFormModal('official-modal')" aria-label="סגור">✕</button>
+        </div>
+        <form id="official-form">
+            <input type="hidden" id="editing-official-id">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>שם *</label>
+                    <input type="text" id="officialName" required placeholder="ישראל ישראלי">
+                </div>
+                <div class="form-group">
+                    <label>תפקיד *</label>
+                    <input type="text" id="officialRole" required placeholder="למשל: גזבר, מנהל מקצועי">
+                </div>
+                <div class="form-group">
+                    <label>טלפון *</label>
+                    <input type="tel" id="officialPhone" required placeholder="0500000000" pattern="[0-9]{9,10}">
+                </div>
+            </div>
+            <button type="submit" id="save-official-btn" class="btn">שמור בעל תפקיד</button>
+            <button type="button" id="delete-official-btn" class="btn-delete-full hidden" onclick="deleteOfficialFromModal()">🗑️ מחק בעל תפקיד</button>
+        </form>
+    </div>
+</div>
+
+<div id="driver-notify-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-form-card">
+        <div class="modal-head">
+            <div id="driver-notify-title" class="modal-title">🚌 עדכון נהג הסעה</div>
+            <button type="button" class="modal-x" onclick="closeDriverNotify()" aria-label="סגור">✕</button>
+        </div>
+        <div id="driver-notify-info" class="fin-note"></div>
+        <div id="driver-notify-list"></div>
+        <button type="button" class="modal-btn modal-btn-secondary" style="width:100%; margin-top:12px;" onclick="closeDriverNotify()">סיום / דלג</button>
+    </div>
+</div>
+
 <div id="schedule-modal" class="modal-overlay hidden">
     <div class="modal-card modal-form-card">
         <div class="modal-head">
@@ -1435,6 +1600,7 @@
                 <button type="submit" id="save-schedule-btn" class="btn btn-inline" style="margin-top: 15px;">הוסף אירוע ללו"ז</button>
                 <button type="button" id="cancel-schedule-btn" class="btn-cancel hidden" onclick="cancelScheduleEdit()">ביטול עריכה</button>
             </div>
+            <button type="button" id="cancel-event-btn" class="btn-transfer-full hidden" onclick="toggleCancelSchedule()">🚫 בטל את האירוע</button>
             <button type="button" id="delete-schedule-btn" class="btn-delete-full hidden" onclick="deleteScheduleFromModal()">🗑️ מחק אירוע</button>
         </form>
     </div>
@@ -1621,6 +1787,7 @@
                 <button type="submit" id="save-game-btn" class="btn btn-inline" style="margin-top: 15px;">הוסף משחק</button>
                 <button type="button" id="cancel-game-btn" class="btn-cancel hidden" onclick="cancelGameEdit()">ביטול עריכה</button>
             </div>
+            <button type="button" id="cancel-game-event-btn" class="btn-transfer-full hidden" onclick="toggleCancelGame()">🚫 בטל את המשחק</button>
             <button type="button" id="delete-game-btn" class="btn-delete-full hidden" onclick="deleteGameFromModal()">🗑️ מחק משחק</button>
         </form>
     </div>
@@ -1804,6 +1971,10 @@
     let gamesData = [];
     let weeklyTemplates = {};
     let financeData = { teams: {}, venues: {} };
+    let driversData = [];
+    let officialsData = [];
+    let teamSettingsData = {};
+    let secSelectedGameId = null;
 
     const FORM_RESETS = {
         'org-modal':      () => document.getElementById('add-org-form').reset(),
@@ -1814,6 +1985,8 @@
         'schedule-modal': () => cancelScheduleEdit(),
         'player-modal':   () => cancelPlayerEdit(),
         'game-modal':     () => cancelGameEdit(),
+        'official-modal': () => { document.getElementById('official-form').reset(); document.getElementById('editing-official-id').value = ''; document.getElementById('official-modal-title').innerText = 'הוספת בעל תפקיד'; document.getElementById('save-official-btn').innerText = 'שמור בעל תפקיד'; document.getElementById('delete-official-btn').classList.add('hidden'); },
+        'driver-modal':   () => { document.getElementById('driver-form').reset(); document.getElementById('editing-driver-id').value = ''; document.getElementById('driver-modal-title').innerText = 'הוספת נהג'; document.getElementById('save-driver-btn').innerText = 'שמור נהג'; document.getElementById('delete-driver-btn').classList.add('hidden'); },
         'pdf-import-modal': () => {
             document.getElementById('pdf-raw-text').value = '';
             const fileInput = document.getElementById('pdf-file-input');
@@ -1874,7 +2047,7 @@
     let calModalItems = [];
     function calGamesFor(team) {
         const today = ymd(new Date());
-        return sortGames(gamesData.filter(g => g.team === team && g.date && g.date >= today));
+        return sortGames(gamesData.filter(g => g.team === team && !g.cancelled && g.date && g.date >= today));
     }
     function calEvent(g) {
         const tm = /^(\d{1,2}):(\d{2})/.exec(g.time || '');
@@ -2592,7 +2765,7 @@
                 const venueDone = {};
                 day.forEach((s, index) => {
                     const v = venueKey(s);
-                    html += `<tr style="${rowBg}">`;
+                    html += `<tr style="${rowBg}${s.cancelled ? ' text-decoration:line-through; opacity:.6;' : ''}">`;
                     if (index === 0) {
                         html += `<td rowspan="${day.length}" style="font-weight: bold; ${dayColBg} border-bottom: 2px solid var(--border);">
                                     ${getDayOfWeek(dateKey)}<br><span style="font-weight: normal; font-size: 12px; color: #64748b;">${formatDate(dateKey).slice(0, 5)}</span>
@@ -2606,7 +2779,7 @@
                     const noteStr = s.isHome ? (/^משחק בית/.test(note) ? '🏠 ' + note : '🏠 משחק בית' + (note ? ' - ' + note : '')) : note;
                     html += `
                         <td class="wk-hours"><span dir="ltr">${escHtml(s.startTime)}</span><br><span dir="ltr">${escHtml(s.endTime)}</span></td>
-                        <td>${escHtml(s.team)}${noteStr ? `<span class="cell-sub">${escHtml(noteStr)}</span>` : ''}</td>
+                        <td>${escHtml(s.team)}${s.cancelled ? ' <span class="cancel-badge">❌ בוטל</span>' : ''}${noteStr ? `<span class="cell-sub">${escHtml(noteStr)}</span>` : ''}</td>
                     </tr>`;
                 });
                 isPinkDay = !isPinkDay;
@@ -2944,7 +3117,7 @@
     function detachListeners() {
         unsubs.forEach(u => { try { u(); } catch (e) {} });
         unsubs = [];
-        teamsData = []; venuesData = []; membersData = []; playersData = []; schedulesData = []; gamesData = []; weeklyTemplates = {}; financeData = { teams: {}, venues: {} };
+        teamsData = []; venuesData = []; membersData = []; playersData = []; schedulesData = []; gamesData = []; weeklyTemplates = {}; financeData = { teams: {}, venues: {} }; driversData = []; officialsData = []; teamSettingsData = {}; secSelectedGameId = null;
         const tk = document.getElementById('today-ticker');
         if (tk) { tk.classList.add('hidden'); delete tk.dataset.sig; }
         membersLoaded = false;
@@ -2995,6 +3168,8 @@
         document.getElementById('nav-admin').classList.add('hidden');
         document.getElementById('nav-reports').classList.add('hidden');
         document.getElementById('nav-weekly').classList.add('hidden');
+        document.getElementById('nav-drivers').classList.add('hidden');
+        document.getElementById('nav-secretary').classList.add('hidden');
         document.getElementById('settings-btn').classList.add('hidden');
         document.getElementById('nav-schedule').classList.add('hidden');
         document.getElementById('nav-games').classList.add('hidden');
@@ -3026,6 +3201,8 @@
         document.getElementById('nav-admin').classList.toggle('hidden', !isAdmin);
         document.getElementById('nav-reports').classList.toggle('hidden', !isAdmin);
         document.getElementById('nav-weekly').classList.remove('hidden');
+        document.getElementById('nav-drivers').classList.toggle('hidden', isAdmin);
+        document.getElementById('nav-secretary').classList.remove('hidden');
         document.getElementById('settings-btn').classList.toggle('hidden', !isAdmin);
         document.getElementById('nav-schedule').classList.remove('hidden');
         document.getElementById('nav-games').classList.remove('hidden');
@@ -3339,19 +3516,19 @@
             if (!trainRate) {
                 // לא נבחר אולם אימונים: משתמשים באולם שבו מתקיימים רוב האימונים שבלו"ז
                 const cnt = {};
-                schedulesData.filter(x => x.team === team && inSeason(x.date) && !isGameEntry(x) && x.venueName && x.venueName !== 'משחק חוץ')
+                schedulesData.filter(x => x.team === team && !x.cancelled && inSeason(x.date) && !isGameEntry(x) && x.venueName && x.venueName !== 'משחק חוץ')
                     .forEach(x => { cnt[x.venueName] = (cnt[x.venueName] || 0) + 1; });
                 const top = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0];
                 if (top) trainRate = rateOf(top);
             }
             let homeGames = 0, awayGames = 0, transportGames = 0, hall = 0;
-            gamesData.filter(g => g.team === team && inSeason(g.date)).forEach(g => {
+            gamesData.filter(g => g.team === team && !g.cancelled && inSeason(g.date)).forEach(g => {
                 if (g.home === 'away') { awayGames++; if (g.needsTransport !== false) transportGames++; return; }
                 homeGames++;
                 // משחק בית שלא משויך לאירוע בלו"ז: נחשב לפי משך ברירת המחדל
                 if (!g.scheduleId) hall += rateOf(g.location) * DEFAULT_DURATION / 60;
             });
-            schedulesData.filter(x => x.team === team && inSeason(x.date)).forEach(x => {
+            schedulesData.filter(x => x.team === team && !x.cancelled && inSeason(x.date)).forEach(x => {
                 const away = !!x.isAway || x.venueName === 'משחק חוץ';
                 if (isGameEntry(x) && !linked.has(x.id)) { if (parseScheduleGame(x).away) { awayGames++; if (x.needsTransport !== false) transportGames++; } else homeGames++; }
                 // כשהוגדרה כמות אימונים שבועית, האימונים נספרים לפי התוכנית ולא לפי מה שהוזן בלו"ז
@@ -3363,7 +3540,7 @@
             const coach = (cfg.coachCost || 0) * SEASON_MONTH_COUNT;
             // הסעות לאימונים: חזור בלבד = כיוון אחד, הלוך וחזור = שני כיוונים
             const dirs = cfg.trainingTransport === 'both' ? 2 : (cfg.trainingTransport === 'return' ? 1 : 0);
-            const trainCount = dirs ? (tpw > 0 ? tpw * SEASON_WEEKS : schedulesData.filter(x => x.team === team && inSeason(x.date) && !isGameEntry(x) && !x.isAway && x.venueName !== 'משחק חוץ').length) : 0;
+            const trainCount = dirs ? (tpw > 0 ? tpw * SEASON_WEEKS : schedulesData.filter(x => x.team === team && !x.cancelled && inSeason(x.date) && !isGameEntry(x) && !x.isAway && x.venueName !== 'משחק חוץ').length) : 0;
             const trainTransport = trainCount * dirs * ttrRate();
             const expenses = referee + transport + trainTransport + hall + coach;
             return { team, players, income, referee, transport, trainTransport, trainCount, dirs, hall, coach, expenses, homeGames, awayGames, transportGames, tpw, trainRate, profit: income - expenses };
@@ -3531,6 +3708,16 @@
     });
 
     function initDataListeners() {
+        unsubs.push(onSnapshot(ccol('teamSettings'), (snap) => {
+            teamSettingsData = {};
+            snap.forEach(d => {
+                const x = d.data();
+                teamSettingsData[decodeHtmlEntities(x.team || d.id)] = { snackFullList: !!x.snackFullList };
+            });
+            syncSnackFullListBox();
+            renderPlayerGames();
+        }, (err) => console.error(err)));
+
         unsubs.push(onSnapshot(ccol('games'), (snap) => {
             gamesData = [];
             snap.forEach(d => {
@@ -3583,6 +3770,15 @@
         }, (err) => console.error(err)));
 
         if (currentUserRole !== 'player') {
+            unsubs.push(onSnapshot(ccol('drivers'), (snap) => {
+                driversData = [];
+                snap.forEach(d => {
+                    const data = d.data();
+                    driversData.push({ id: d.id, ...data, name: decodeHtmlEntities(data.name), phone: String(data.phone || '') });
+                });
+                driversData.sort((a, b) => a.name.localeCompare(b.name, 'he'));
+                renderDrivers();
+            }, (err) => console.error(err)));
             unsubs.push(onSnapshot(ccol('weeklyTemplates'), (snap) => {
                 snap.forEach(d => {
                     const x = d.data();
@@ -3595,6 +3791,15 @@
         }
 
         if (currentUserRole === 'admin') {
+            unsubs.push(onSnapshot(ccol('officials'), (snap) => {
+                officialsData = [];
+                snap.forEach(d => {
+                    const data = d.data();
+                    officialsData.push({ id: d.id, ...data, name: decodeHtmlEntities(data.name), role: decodeHtmlEntities(data.role), phone: String(data.phone || '') });
+                });
+                officialsData.sort((a, b) => a.name.localeCompare(b.name, 'he'));
+                renderOfficials();
+            }, (err) => console.error(err)));
             unsubs.push(onSnapshot(cdoc('finance', 'settings'), (d) => {
                 const x = d.exists() ? d.data() : {};
                 financeData = { teams: x.teams || {}, venues: x.venues || {}, trainingTransportCost: x.trainingTransportCost, extraIncome: x.extraIncome || {} };
@@ -3850,6 +4055,7 @@
 
         const conflict = schedulesData.find(s => {
             if (editId && s.id === editId) return false;
+            if (s.cancelled) return false;
             if (selectedVenue === 'משחק חוץ') return false;
             if (s.date === newDate && s.venueName === selectedVenue) {
                 return (newStart < s.endTime && newEnd > s.startTime);
@@ -3879,8 +4085,10 @@
         };
 
         let notifyChange = false;
+        let beforeItem = null;
         if (editId) {
-            const chg = scheduleChangeFields(schedulesData.find(x => x.id === editId), scheduleObj);
+            beforeItem = schedulesData.find(x => x.id === editId);
+            const chg = scheduleChangeFields(beforeItem, scheduleObj);
             Object.assign(scheduleObj, chg);
             notifyChange = chg.changedAt > 0;
             await updateDoc(cdoc('schedules', editId), scheduleObj);
@@ -3895,7 +4103,10 @@
             }
         }
         cancelScheduleEdit();
-        if (notifyChange) await offerWhatsAppUpdate(scheduleUpdateMessage(scheduleObj));
+        if (notifyChange) {
+            await notifyDriversCancel(scheduleChangeDriverInfo(scheduleObj, beforeItem));
+            await offerWhatsAppUpdate(scheduleUpdateMessage(scheduleObj));
+        }
     });
 
     document.getElementById('player-form').addEventListener('submit', async (e) => {
@@ -3943,7 +4154,7 @@
 
     function gameDateHtml(g) {
         const c = gameChange(g);
-        return `${c ? c.when : ''}<strong>${getDayOfWeek(g.date)}</strong><br><span style="font-size:12px; color:#64748b;">${formatDate(g.date)}${g.time ? '<br>' + escHtml(g.time) : ''}</span>${c ? c.badge : ''}`;
+        return `${c ? c.when : ''}<strong>${getDayOfWeek(g.date)}</strong><br><span style="font-size:12px; color:#64748b;">${formatDate(g.date)}${g.time ? '<br>' + escHtml(g.time) : ''}</span>${c ? c.badge : ''}${g.cancelled ? CANCEL_BADGE : ''}`;
     }
 
     function transportLineHtml(away, needs, time) {
@@ -3988,7 +4199,7 @@
         const team = decodeHtmlEntities(sel ? sel.value : '');
         if (!team) { await showAlert('יש לבחור קבוצה תחילה.', 'שגיאה'); return; }
         const today = ymd(new Date());
-        const upcoming = sortGames(gamesData.filter(g => g.team === team && g.date && g.date >= today));
+        const upcoming = sortGames(gamesData.filter(g => g.team === team && !g.cancelled && g.date && g.date >= today));
         const players = playersData.filter(p => p.team === team)
             .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, 'he'));
         if (!upcoming.length) { await showAlert(`אין משחקים עתידיים לקבוצה "${team}".`, 'אין משחקים'); return; }
@@ -4265,6 +4476,180 @@
         if (yes) window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
     }
 
+    // --- ביטול אירוע (אימון / משחק): נשאר ברשימה ומסומן "בוטל" לשחקנים ולהורים, בניגוד למחיקה ---
+    const CANCEL_BADGE = '<br><span class="cancel-badge">❌ בוטל</span>';
+
+    async function setEventCancelled(coll, id, cancel) {
+        const item = (coll === 'schedules' ? schedulesData : gamesData).find(x => x.id === id);
+        if (!item) return null;
+        const label = (coll === 'games' || isGameEntry(item)) ? 'משחק' : 'אימון';
+        const ok = await showConfirm(cancel
+            ? `לסמן את ה${label} כמבוטל?\nשחקנים והורים יראו שהוא בוטל. אפשר לשחזר בכל רגע.`
+            : `לשחזר את ה${label} ולהסיר את סימון הביטול?`, cancel ? 'ביטול אירוע' : 'שחזור אירוע');
+        if (!ok) return null;
+        const fields = cancel ? { cancelled: true, cancelledAt: Date.now() } : { cancelled: false, cancelledAt: 0 };
+        try {
+            const batch = writeBatch(db);
+            batch.update(cdoc(coll, id), fields);
+            // משחק קשור ללו"ז (scheduleId): מסנכרנים את הסימון בשני הצדדים
+            if (coll === 'schedules') gamesData.filter(g => g.scheduleId === id).forEach(g => batch.update(cdoc('games', g.id), fields));
+            else if (item.scheduleId && schedulesData.some(s => s.id === item.scheduleId)) batch.update(cdoc('schedules', item.scheduleId), fields);
+            await batch.commit();
+        } catch (err) {
+            console.error(err);
+            await showAlert('שגיאה בעדכון האירוע: ' + err.message, 'שגיאה');
+            return null;
+        }
+        showToast(cancel ? `ה${label} סומן כמבוטל` : `ה${label} שוחזר`);
+        return { item, label };
+    }
+
+    function cancelMessage(team, label, opp, when) {
+        const title = [clubData && clubShortName(clubData), team].filter(Boolean).join(' - ');
+        return (title ? `*${title}*\n` : '') + `❌ בוטל ${label}${opp ? ' נגד ' + opp : ''}\n${when}\nפרטים באפליקציה: ${APP_URL}`;
+    }
+
+    // --- עדכון נהג ההסעה על ביטול: בחירת נהג, ואז וואטסאפ או חיוג ---
+    let driverNotifyResolve = null;
+    let driverNotifyInfo = null;
+
+    function scheduleDriverInfo(s) {
+        const game = isGameEntry(s);
+        const away = !!s.isAway || s.venueName === 'משחק חוץ';
+        return {
+            label: game ? 'המשחק' : 'האימון',
+            date: s.date,
+            time: (game && gameTimeFromNote(s.customNote)) || s.startTime || '',
+            place: away ? decodeHtmlEntities(s.address || '') : decodeHtmlEntities(s.venueName || ''),
+            skip: away && s.needsTransport === false
+        };
+    }
+
+    function gameDriverInfo(g) {
+        const away = g.home === 'away';
+        return {
+            label: 'המשחק',
+            date: g.date,
+            time: g.time || '',
+            place: decodeHtmlEntities(away ? (g.address || g.location || '') : (g.location || '')),
+            skip: away && g.needsTransport === false
+        };
+    }
+
+    function driverChangeMessage(name, info) {
+        const entity = (clubData && clubData.sport === 'כדורגל') ? 'מגרש' : 'אולם';
+        const old = `בתאריך ${formatDate(info.oldDate)}${info.oldTime ? ' בשעה ' + info.oldTime : ''}${info.oldPlace ? ' אל ' + info.oldPlace : ''}`;
+        const now = `${info.newPlace ? ' ל' + (info.newPlace.startsWith(entity) ? info.newPlace : entity + ' ' + info.newPlace) : ''}${info.newTime ? ' בשעה ' + info.newTime : ''}${info.newDate !== info.oldDate ? ' בתאריך ' + formatDate(info.newDate) : ''}`;
+        return `היי ${name}, ${info.label} ${old} השתנה${now}. יש צורך לשנות זמני הסעה.`;
+    }
+
+    function scheduleChangeDriverInfo(s, before) {
+        const game = isGameEntry(s);
+        const away = !!s.isAway || s.venueName === 'משחק חוץ';
+        const awayBefore = s.prevVenue === 'משחק חוץ';
+        return {
+            type: 'change',
+            label: game ? 'המשחק' : 'האימון',
+            oldDate: s.prevDate,
+            oldTime: (game && before && gameTimeFromNote(before.customNote)) || s.prevStart || '',
+            oldPlace: decodeHtmlEntities(awayBefore ? ((before && before.address) || '') : (s.prevVenue || '')),
+            newDate: s.date,
+            newTime: (game && gameTimeFromNote(s.customNote)) || s.startTime || '',
+            newPlace: decodeHtmlEntities(away ? (s.address || '') : (s.venueName || '')),
+            skip: away && s.needsTransport === false
+        };
+    }
+
+    function gameChangeDriverInfo(g, before) {
+        const away = g.home === 'away';
+        return {
+            type: 'change',
+            label: 'המשחק',
+            oldDate: g.prevDate,
+            oldTime: g.prevTime || '',
+            oldPlace: decodeHtmlEntities(away ? ((before && before.address) || g.prevLocation || '') : (g.prevLocation || '')),
+            newDate: g.date,
+            newTime: g.time || '',
+            newPlace: decodeHtmlEntities(away ? (g.address || g.location || '') : (g.location || '')),
+            skip: away && g.needsTransport === false
+        };
+    }
+
+    function driverCancelMessage(name, info) {
+        if (info.type === 'change') return driverChangeMessage(name, info);
+        return `היי ${name}, ${info.label} בתאריך ${formatDate(info.date)}${info.time ? ' בשעה ' + info.time : ''}${info.place ? ' אל ' + info.place : ''} מבוטל ואין צורך בהסעה.`;
+    }
+
+    function intlPhone(p) {
+        const d = String(p || '').replace(/\D/g, '');
+        return d.startsWith('0') ? '972' + d.slice(1) : d;
+    }
+
+    window.closeDriverNotify = function() {
+        document.getElementById('driver-notify-modal').classList.add('hidden');
+        if (driverNotifyResolve) { const r = driverNotifyResolve; driverNotifyResolve = null; r(); }
+    };
+
+    window.driverNotifyWhatsApp = function(i) {
+        const d = driversData[Number(i)];
+        if (!d || !driverNotifyInfo) return;
+        window.open(`https://wa.me/${intlPhone(d.phone)}?text=${encodeURIComponent(driverCancelMessage(d.name, driverNotifyInfo))}`, '_blank');
+    };
+
+    function notifyDriversCancel(info) {
+        if (!driversData.length || info.skip) return Promise.resolve();
+        return new Promise((resolve) => {
+            driverNotifyResolve = resolve;
+            driverNotifyInfo = info;
+            document.getElementById('driver-notify-title').textContent = info.type === 'change' ? '🚌 עדכון נהג הסעה על שינוי' : '🚌 עדכון נהג הסעה על ביטול';
+            document.getElementById('driver-notify-info').textContent = info.type === 'change'
+                ? `${info.label} בתאריך ${formatDate(info.oldDate)} השתנה. בחר למי מהנהגים לעדכן (וואטסאפ עם הודעה מוכנה, או שיחה):`
+                : `${info.label} בתאריך ${formatDate(info.date)}${info.time ? ' בשעה ' + info.time : ''} בוטל. בחר למי מהנהגים לעדכן (וואטסאפ עם הודעה מוכנה, או שיחה):`;
+            document.getElementById('driver-notify-list').innerHTML = driversData.map((d, i) => `
+                <div class="fin-card">
+                    <div class="fin-name">${escHtml(d.name)}</div>
+                    <div dir="ltr" style="text-align:right; font-size:13px; color:#64748b; margin-bottom:8px;">${escHtml(d.phone)}</div>
+                    <div style="display:flex; gap:8px;">
+                        <button type="button" class="btn-whatsapp" style="flex:1; width:auto;" data-i="${i}" onclick="driverNotifyWhatsApp(this.dataset.i)">💬 וואטסאפ</button>
+                        <a class="btn-add" style="flex:1; text-align:center; text-decoration:none;" href="tel:${escAttr(String(d.phone).replace(/[^\d+]/g, ''))}">📞 התקשר</a>
+                    </div>
+                </div>`).join('');
+            document.getElementById('driver-notify-modal').classList.remove('hidden');
+        });
+    }
+
+    window.toggleCancelSchedule = async function() {
+        const id = document.getElementById('editing-schedule-id').value;
+        const cur = schedulesData.find(x => x.id === id);
+        if (!cur) return;
+        const cancel = !cur.cancelled;
+        const res = await setEventCancelled('schedules', id, cancel);
+        if (!res) return;
+        cancelScheduleEdit();
+        if (cancel) {
+            const s = res.item;
+            const ven = (s.venueName && s.venueName !== 'משחק חוץ') ? decodeHtmlEntities(s.venueName) : (s.venueName ? 'חוץ' : '');
+            const opp = res.label === 'משחק' ? parseScheduleGame(s).opponent : '';
+            await notifyDriversCancel(scheduleDriverInfo(s));
+            await offerWhatsAppUpdate(cancelMessage(s.team, res.label, opp, whenText(s.date, s.startTime, s.endTime, ven)));
+        }
+    };
+
+    window.toggleCancelGame = async function() {
+        const id = document.getElementById('editing-game-id').value;
+        const cur = gamesData.find(x => x.id === id);
+        if (!cur) return;
+        const cancel = !cur.cancelled;
+        const res = await setEventCancelled('games', id, cancel);
+        if (!res) return;
+        cancelGameEdit();
+        if (cancel) {
+            const g = res.item;
+            await notifyDriversCancel(gameDriverInfo(g));
+            await offerWhatsAppUpdate(cancelMessage(g.team, 'משחק', g.opponent, whenText(g.date, g.time, '', g.location)));
+        }
+    };
+
     const isGameEntry = (x) => !!(x.isHome || x.isAway || x.venueName === 'משחק חוץ' || /משחק/.test(x.customNote || ''));
 
     window.renderGameScheduleOptions = function() {
@@ -4327,12 +4712,12 @@
         const seen = new Set();
         const key = (team, time) => `${team}|${time}`;
         const linked = new Set(gamesData.filter(g => g.scheduleId).map(g => g.scheduleId));
-        gamesData.filter(g => g.date === today).forEach(g => {
+        gamesData.filter(g => g.date === today && !g.cancelled).forEach(g => {
             const away = g.home === 'away';
             seen.add(key(g.team, g.time || ''));
             out.push({ team: g.team, time: g.time || '', opponent: decodeHtmlEntities(g.opponent || ''), away, location: away ? '' : decodeHtmlEntities(g.location || '') });
         });
-        schedulesData.filter(x => x.date === today && isGameEntry(x) && !linked.has(x.id)).forEach(x => {
+        schedulesData.filter(x => x.date === today && !x.cancelled && isGameEntry(x) && !linked.has(x.id)).forEach(x => {
             const gt = gameTimeFromNote(x.customNote) || x.startTime || '';
             const k = key(x.team, gt);
             if (seen.has(k)) return;
@@ -4364,12 +4749,186 @@
     }
     setInterval(renderTicker, 60000);
 
+    function syncSnackFullListBox() {
+        const box = document.getElementById('snack-full-list');
+        const sel = document.getElementById('games-filter-team');
+        if (!box || !sel) return;
+        const t = teamSettingsData[decodeHtmlEntities(sel.value)];
+        box.checked = !!(t && t.snackFullList);
+    }
+
+    window.onSnackFullListChange = async function(checked) {
+        const team = decodeHtmlEntities(document.getElementById('games-filter-team').value);
+        if (!team) { document.getElementById('snack-full-list').checked = !checked; await showAlert('יש לבחור קבוצה תחילה.', 'שגיאה'); return; }
+        try {
+            await setDoc(cdoc('teamSettings', team), { team, snackFullList: !!checked });
+            teamSettingsData[team] = { snackFullList: !!checked };
+            showToast(checked ? 'שחקנים והורים יראו את הרשימה המלאה' : 'שחקנים והורים יראו רק את השבוע הנוכחי והבא');
+        } catch (err) {
+            console.error(err);
+            document.getElementById('snack-full-list').checked = !checked;
+            await showAlert('שגיאה בשמירת ההגדרה: ' + err.message + '\n\nאם מדובר בחוסר הרשאה - יש לפרסם את חוקי Firestore המעודכנים.', 'שגיאה');
+        }
+    };
+
+    // --- שיבוץ מזכירות למשחקי בית: שחקני המועדון, חוץ משחקני הקבוצה המשחקת ושחקנים עם פעילות באותה שעה ---
+    function secGameInterval(g) {
+        const sch = g.scheduleId ? schedulesData.find(x => x.id === g.scheduleId) : null;
+        let a = sch ? parseHM(sch.startTime) : null, b = sch ? parseHM(sch.endTime) : null;
+        if (a === null || b === null) {
+            const t = parseHM(g.time);
+            a = t === null ? 19 * 60 : t;
+            b = a + DEFAULT_DURATION;
+        }
+        return [a, b];
+    }
+
+    // קבוצות שיש להן אימון / משחק (שלא בוטל) באותו תאריך בשעות חופפות למשחק
+    function secBusyTeams(g) {
+        const [a, b] = secGameInterval(g);
+        const set = new Set();
+        schedulesData.forEach(x => {
+            if (x.cancelled || x.date !== g.date || x.team === g.team) return;
+            const s1 = parseHM(x.startTime), e1 = parseHM(x.endTime);
+            if (s1 !== null && e1 !== null && s1 < b && e1 > a) set.add(x.team);
+        });
+        gamesData.forEach(o => {
+            if (o.id === g.id || o.cancelled || o.scheduleId || o.date !== g.date || o.team === g.team) return;
+            const t = parseHM(o.time);
+            if (t !== null && t < b && t + DEFAULT_DURATION > a) set.add(o.team);
+        });
+        return set;
+    }
+
+    function secExcludedSet() {
+        try {
+            const raw = localStorage.getItem('sec_excl_' + currentClubId);
+            if (raw) return new Set(JSON.parse(raw).map(n => decodeHtmlEntities(n)));
+        } catch (e) {}
+        return new Set(teamsData.map(t => t.name).filter(n => /קטסל|קט סל|קט-סל|ילדים/.test(n)));
+    }
+
+    window.secToggleTeam = function(name, include) {
+        const set = secExcludedSet();
+        if (include) set.delete(name); else set.add(name);
+        try { localStorage.setItem('sec_excl_' + currentClubId, JSON.stringify([...set])); } catch (e) {}
+        renderSecretary();
+    };
+
+    window.secTeamChanged = function() {
+        secSelectedGameId = null;
+        renderSecretary();
+    };
+
+    window.secSelectGame = function(id) {
+        secSelectedGameId = id;
+        renderSecretary();
+    };
+
+    async function secSetAssigned(gameId, name, id, assign) {
+        const g = gamesData.find(x => x.id === gameId);
+        if (!g) return;
+        const list = (g.secretaries || []).filter(x => x.name !== name);
+        if (assign) list.push({ id, name });
+        try {
+            await updateDoc(cdoc('games', gameId), { secretaries: list });
+        } catch (err) {
+            console.error(err);
+            await showAlert('שגיאה בשמירת השיבוץ: ' + err.message, 'שגיאה');
+        }
+    }
+    window.secToggle = function(btn) {
+        const g = gamesData.find(x => x.id === secSelectedGameId);
+        if (!g) return;
+        const name = btn.dataset.name;
+        const assigned = (g.secretaries || []).some(x => x.name === name);
+        secSetAssigned(g.id, name, btn.dataset.id, !assigned);
+    };
+    window.secRemove = function(btn) { secSetAssigned(btn.dataset.game, btn.dataset.name, '', false); };
+
+    function renderSecretary() {
+        const view = document.getElementById('view-secretary');
+        if (!view || view.classList.contains('hidden') || currentUserRole === 'player') return;
+        const team = decodeHtmlEntities(document.getElementById('sec-team').value);
+        const today = ymd(new Date());
+        const games = sortGames(gamesData.filter(g => g.team === team && g.home !== 'away' && !g.cancelled));
+        if (secSelectedGameId && !games.some(g => g.id === secSelectedGameId)) secSelectedGameId = null;
+        if (!secSelectedGameId && games.length) secSelectedGameId = (games.find(g => g.date >= today) || games[0]).id;
+
+        document.getElementById('sec-games').innerHTML = games.length ? games.map(g => {
+            const chips = (g.secretaries || []).map(x => `<span class="sec-chip">${escHtml(x.name)}<button type="button" data-game="${escAttr(g.id)}" data-name="${escAttr(x.name)}" onclick="event.stopPropagation(); secRemove(this)" aria-label="הסר">✕</button></span>`).join('');
+            return `<div class="fin-card sec-game${g.id === secSelectedGameId ? ' sec-selected' : ''}${g.date < today ? ' sec-past' : ''}" data-id="${escAttr(g.id)}" onclick="secSelectGame(this.dataset.id)">
+                <div class="fin-name">${getDayOfWeek(g.date)} ${formatDate(g.date).slice(0, 5)}${g.time ? ' · ' + escHtml(g.time) : ''} · ${g.opponent ? 'נגד ' + escHtml(g.opponent) : 'משחק'}</div>
+                ${g.location ? `<span class="cell-sub" style="margin:0 0 4px;">${escHtml(g.location)}</span>` : ''}
+                <div style="font-size:13px;">${chips ? '🗂️ מזכירות: ' + chips : '<span style="color:#94a3b8;">טרם שובצו מזכירות</span>'}</div>
+            </div>`;
+        }).join('') : '<div class="fin-note" style="text-align:center;">אין משחקי בית לקבוצה זו.</div>';
+
+        const excluded = secExcludedSet();
+        const names = sortTeamsByAge(teamsData).map(t => t.name);
+        document.getElementById('sec-team-filter').innerHTML = names.map(n => `<label class="check-item"><input type="checkbox" value="${escAttr(n)}" ${excluded.has(n) ? '' : 'checked'} onchange="secToggleTeam(this.value, this.checked)"> ${escHtml(n)}</label>`).join('');
+        const hiddenCount = names.filter(n => excluded.has(n)).length;
+        document.getElementById('sec-team-filter-sum').textContent = hiddenCount ? `סינון קבוצות (${hiddenCount} מוסתרות)` : 'סינון קבוצות';
+        renderSecretaryPlayers();
+    }
+
+    function renderSecretaryPlayers() {
+        const body = document.getElementById('sec-players-body');
+        const hint = document.getElementById('sec-players-hint');
+        const view = document.getElementById('view-secretary');
+        if (!body || !view || view.classList.contains('hidden')) return;
+        const g = gamesData.find(x => x.id === secSelectedGameId);
+        if (!g) {
+            hint.textContent = '';
+            body.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#64748b;">בחר משחק מהרשימה כדי לשבץ מזכירות.</td></tr>';
+            return;
+        }
+        const pname = (p) => `${p.firstName} ${p.lastName}`.trim();
+        const busy = secBusyTeams(g);
+        const excluded = secExcludedSet();
+        const blocked = new Set(playersData.filter(p => p.team === g.team || busy.has(p.team)).map(pname));
+        const counts = {};
+        gamesData.forEach(x => (x.secretaries || []).forEach(s => { counts[s.name] = (counts[s.name] || 0) + 1; }));
+        const assigned = new Set((g.secretaries || []).map(x => x.name));
+        const q = decodeHtmlEntities(document.getElementById('sec-search').value).trim().toLowerCase();
+        const mode = document.getElementById('sec-filter').value;
+
+        hint.textContent = `${getDayOfWeek(g.date)} ${formatDate(g.date).slice(0, 5)}${g.time ? ' · ' + g.time : ''}${g.opponent ? ' נגד ' + g.opponent : ''}. לא מוצגים: שחקני ${g.team}${busy.size ? ' ושחקני קבוצות עם פעילות באותה שעה (' + [...busy].join(', ') + ')' : ''}.`;
+
+        const seen = new Set();
+        const list = playersData.filter(p => {
+            const n = pname(p);
+            if (!validTeamRecord(p) || excluded.has(p.team) || blocked.has(n) || seen.has(n)) return false;
+            seen.add(n);
+            if (q && !n.toLowerCase().includes(q)) return false;
+            if (mode === 'assigned') return assigned.has(n);
+            if (mode === 'unassigned') return !assigned.has(n);
+            if (mode === 'never') return !counts[n];
+            return true;
+        }).sort((a, b) => pname(a).localeCompare(pname(b), 'he'));
+
+        const cntText = (n) => n === 0 ? 'לא שובץ' : (n === 1 ? 'פעם אחת' : (n === 2 ? 'פעמיים' : n + ' פעמים'));
+        body.innerHTML = list.length ? list.map(p => {
+            const n = pname(p);
+            const on = assigned.has(n);
+            const c = counts[n] || 0;
+            return `<tr class="${on ? 'snack-mine' : ''}">
+                <td>${escHtml(n)}<span class="cell-sub">${escHtml(p.team)}</span></td>
+                <td><span class="snack-cnt${c >= 2 ? ' snack-cnt-high' : ''}">${cntText(c)}</span></td>
+                <td><button type="button" class="${on ? 'btn-danger' : 'btn-edit-blue'}" data-id="${escAttr(p.id)}" data-name="${escAttr(n)}" onclick="secToggle(this)">${on ? '✕ בטל' : '➕ שבץ'}</button></td>
+            </tr>`;
+        }).join('') : '<tr><td colspan="3" style="text-align:center; color:#64748b;">לא נמצאו שחקנים.</td></tr>';
+    }
+    window.renderSecretaryPlayers = renderSecretaryPlayers;
+
     window.renderGames = function() {
+        renderSecretary();
         renderTicker();
         renderReports();
         const tbody = document.getElementById('games-table-body');
         if (!tbody) return;
         const team = decodeHtmlEntities(document.getElementById('games-filter-team').value);
+        syncSnackFullListBox();
         const items = sortGames(gamesData.filter(g => g.team === team));
         if (!items.length) {
             tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#64748b;">טרם הוזנו משחקים לקבוצה זו.</td></tr>';
@@ -4377,7 +4936,7 @@
         }
         const today = ymd(new Date());
         tbody.innerHTML = items.map(g => `
-            <tr class="${g.date < today ? 'game-past' : ''}${gameChange(g) ? ' row-changed' : ''}">
+            <tr class="${g.date < today ? 'game-past' : ''}${gameChange(g) ? ' row-changed' : ''}${g.cancelled ? ' row-cancelled' : ''}">
                 <td>${gameDateHtml(g)}</td>
                 <td>${gameTitleHtml(g)}</td>
                 <td>${snackHtml(g)}</td>
@@ -4396,16 +4955,18 @@
             return;
         }
         const today = ymd(new Date());
-        const items = sortGames(gamesData.filter(g => g.team === team && g.date >= today));
+        const full = !!(teamSettingsData[team] && teamSettingsData[team].snackFullList);
+        const lastDay = getWeekRanges().nextEnd;
+        const items = sortGames(gamesData.filter(g => g.team === team && g.date >= today && (full || g.date <= lastDay)));
         if (!items.length) {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">אין משחקים מתוכננים לקבוצה זו כרגע.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">' + (full ? 'אין משחקים מתוכננים לקבוצה זו כרגע.' : 'אין משחקים מתוכננים לשבוע הנוכחי ולשבוע הבא.') + '</td></tr>';
             return;
         }
         const myIds = new Set(playersData.filter(p => currentLoggedInPhone && (p.playerPhone === currentLoggedInPhone || p.parentPhone === currentLoggedInPhone)).map(p => p.id));
         tbody.innerHTML = items.map(g => {
-            const mine = (g.snackParents || []).some(x => myIds.has(x.id));
+            const mine = !g.cancelled && (g.snackParents || []).some(x => myIds.has(x.id));
             return `
-                <tr class="${mine ? 'snack-mine' : ''}${gameChange(g) ? ' row-changed' : ''}">
+                <tr class="${mine ? 'snack-mine' : ''}${gameChange(g) ? ' row-changed' : ''}${g.cancelled ? ' row-cancelled' : ''}">
                     <td>${gameDateHtml(g)}</td>
                     <td>${gameTitleHtml(g)}</td>
                     <td>${snackHtml(g)}${mine ? '<br><span class="snack-badge">🍕 תורכם להביא כיבוד!</span>' : ''}</td>
@@ -4436,8 +4997,10 @@
         };
         try {
             let notifyChange = false;
+        let beforeItem = null;
             if (editId) {
-                const chg = gameChangeFields(gamesData.find(x => x.id === editId), gameObj);
+                beforeItem = gamesData.find(x => x.id === editId);
+                const chg = gameChangeFields(beforeItem, gameObj);
                 Object.assign(gameObj, chg);
                 notifyChange = chg.changedAt > 0;
                 await updateDoc(cdoc('games', editId), gameObj);
@@ -4450,7 +5013,10 @@
                 try { await updateDoc(cdoc('schedules', gameObj.scheduleId), { needsTransport: gameObj.needsTransport, transportTime: gameObj.transportTime }); } catch (e) { console.error(e); }
             }
             cancelGameEdit();
-            if (notifyChange) await offerWhatsAppUpdate(gameUpdateMessage(gameObj));
+            if (notifyChange) {
+                await notifyDriversCancel(gameChangeDriverInfo(gameObj, beforeItem));
+                await offerWhatsAppUpdate(gameUpdateMessage(gameObj));
+            }
         } catch (err) {
             console.error(err);
             await showAlert('שגיאה בשמירת המשחק: ' + err.message, 'שגיאה');
@@ -4480,6 +5046,9 @@
         document.getElementById('save-game-btn').innerText = 'עדכן משחק';
         document.getElementById('cancel-game-btn').classList.remove('hidden');
         document.getElementById('delete-game-btn').classList.remove('hidden');
+        const gcb = document.getElementById('cancel-game-event-btn');
+        gcb.innerText = g.cancelled ? '↩️ שחזר את המשחק (הסר ביטול)' : '🚫 בטל את המשחק';
+        gcb.classList.remove('hidden');
         document.getElementById('game-modal').classList.remove('hidden');
     };
 
@@ -4495,6 +5064,7 @@
         document.getElementById('save-game-btn').innerText = 'הוסף משחק';
         document.getElementById('cancel-game-btn').classList.add('hidden');
         document.getElementById('delete-game-btn').classList.add('hidden');
+        document.getElementById('cancel-game-event-btn').classList.add('hidden');
         document.getElementById('game-modal').classList.add('hidden');
     };
 
@@ -4546,6 +5116,9 @@
         document.getElementById('save-schedule-btn').innerText = 'עדכן אירוע';
         document.getElementById('cancel-schedule-btn').classList.remove('hidden');
         document.getElementById('delete-schedule-btn').classList.remove('hidden');
+        const cb = document.getElementById('cancel-event-btn');
+        cb.innerText = item.cancelled ? '↩️ שחזר את האירוע (הסר ביטול)' : (isGameEntry(item) ? '🚫 בטל את המשחק' : '🚫 בטל את האימון');
+        cb.classList.remove('hidden');
         document.getElementById('schedule-modal').classList.remove('hidden');
     };
 
@@ -4685,7 +5258,7 @@
         const dateOf = (day) => ymd(new Date(y, m - 1, d + day));
         const entity = (clubData && clubData.sport === 'כדורגל') ? 'המגרש' : 'האולם';
 
-        const pool = schedulesData.slice();
+        const pool = schedulesData.filter(s => !s.cancelled);
         const toAdd = [];
         const skipped = [];
         for (const r of rows) {
@@ -4765,6 +5338,7 @@
         pls.forEach(p => ops.push(b => b.delete(cdoc('players', p.id))));
         scs.forEach(s => ops.push(b => b.delete(cdoc('schedules', s.id))));
         gms.forEach(g => ops.push(b => b.delete(cdoc('games', g.id))));
+        if (teamSettingsData[t.name]) ops.push(b => b.delete(cdoc('teamSettings', t.name)));
         coaches.forEach(m => ops.push(b => b.update(doc(db, 'memberships', m.id), { teams: (m.teams || []).filter(x => x !== t.name) })));
         try {
             for (let i = 0; i < ops.length; i += 400) {
@@ -4819,6 +5393,10 @@
         pls.forEach(p => ops.push(b => b.update(cdoc('players', p.id), { team: decodedNewName })));
         scs.forEach(s => ops.push(b => b.update(cdoc('schedules', s.id), { team: decodedNewName })));
         gms.forEach(g => ops.push(b => b.update(cdoc('games', g.id), { team: decodedNewName })));
+        if (teamSettingsData[oldName]) {
+            ops.push(b => b.set(cdoc('teamSettings', decodedNewName), { team: decodedNewName, snackFullList: !!teamSettingsData[oldName].snackFullList }));
+            ops.push(b => b.delete(cdoc('teamSettings', oldName)));
+        }
         coaches.forEach(m => ops.push(b => b.update(doc(db, 'memberships', m.id), { teams: (m.teams || []).map(t => t === oldName ? decodedNewName : t) })));
         try {
             for (let i = 0; i < ops.length; i += 400) {
@@ -4888,6 +5466,120 @@
         if (id && await deleteDocRef('venues', id)) cancelVenueEdit();
     };
 
+    // --- נהגי הסעות: מנהל מוסיף/מעדכן/מוחק, מאמן צופה בלבד. לחיצה על הטלפון פותחת את החייגן ---
+    function driverPhoneHtml(phone) {
+        const dial = String(phone || '').replace(/[^\d+]/g, '');
+        if (!dial) return '<span style="color:#94a3b8;">-</span>';
+        return `<a href="tel:${escAttr(dial)}" dir="ltr" style="color:var(--primary); font-weight:700; text-decoration:none;">📞 ${escHtml(phone)}</a>`;
+    }
+
+    function renderDrivers() {
+        const admin = document.getElementById('drivers-table-body');
+        if (admin) {
+            admin.innerHTML = driversData.length
+                ? driversData.map(d => `<tr><td><strong>${escHtml(d.name)}</strong></td><td>${driverPhoneHtml(d.phone)}</td><td><button class="btn-edit-blue" data-id="${escAttr(d.id)}" onclick="editDriver(this.dataset.id)">ערוך</button></td></tr>`).join('')
+                : '<tr><td colspan="3" style="text-align:center; color:#64748b;">טרם הוזנו נהגים.</td></tr>';
+        }
+        const view = document.getElementById('drivers-view-body');
+        if (view) {
+            view.innerHTML = driversData.length
+                ? driversData.map(d => `<tr><td><strong>${escHtml(d.name)}</strong></td><td>${driverPhoneHtml(d.phone)}</td></tr>`).join('')
+                : '<tr><td colspan="2" style="text-align:center; color:#64748b;">טרם הוזנו נהגים.</td></tr>';
+        }
+    }
+
+    function renderOfficials() {
+        const tbody = document.getElementById('officials-table-body');
+        if (!tbody) return;
+        tbody.innerHTML = officialsData.length
+            ? officialsData.map(o => `<tr><td><strong>${escHtml(o.name)}</strong></td><td>${escHtml(o.role)}</td><td>${driverPhoneHtml(o.phone)}</td><td><button class="btn-edit-blue" data-id="${escAttr(o.id)}" onclick="editOfficial(this.dataset.id)">ערוך</button></td></tr>`).join('')
+            : '<tr><td colspan="4" style="text-align:center; color:#64748b;">טרם הוזנו בעלי תפקידים.</td></tr>';
+    }
+
+    document.getElementById('official-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (currentUserRole !== 'admin') return;
+        const editId = document.getElementById('editing-official-id').value;
+        const obj = {
+            name: decodeHtmlEntities(document.getElementById('officialName').value.trim()),
+            role: decodeHtmlEntities(document.getElementById('officialRole').value.trim()),
+            phone: document.getElementById('officialPhone').value.trim()
+        };
+        if (!obj.name || !obj.role || !obj.phone) return;
+        try {
+            if (editId) {
+                await updateDoc(cdoc('officials', editId), obj);
+                showToast('פרטי בעל התפקיד עודכנו בהצלחה!');
+            } else {
+                await addDoc(ccol('officials'), obj);
+                showToast('בעל התפקיד נוסף בהצלחה!');
+            }
+            closeFormModal('official-modal');
+        } catch (err) {
+            console.error(err);
+            await showAlert('שגיאה בשמירה: ' + err.message + '\n\nאם מדובר בחוסר הרשאה - יש לפרסם את חוקי Firestore המעודכנים.', 'שגיאה');
+        }
+    });
+
+    window.editOfficial = function(id) {
+        const o = officialsData.find(x => x.id === id);
+        if (!o) return;
+        document.getElementById('editing-official-id').value = o.id;
+        document.getElementById('officialName').value = o.name;
+        document.getElementById('officialRole').value = o.role;
+        document.getElementById('officialPhone').value = o.phone;
+        document.getElementById('official-modal-title').innerText = 'עדכון בעל תפקיד';
+        document.getElementById('save-official-btn').innerText = 'עדכן בעל תפקיד';
+        document.getElementById('delete-official-btn').classList.remove('hidden');
+        document.getElementById('official-modal').classList.remove('hidden');
+    };
+
+    window.deleteOfficialFromModal = async function() {
+        const id = document.getElementById('editing-official-id').value;
+        if (id && await deleteDocRef('officials', id)) closeFormModal('official-modal');
+    };
+
+    document.getElementById('driver-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (currentUserRole !== 'admin') return;
+        const editId = document.getElementById('editing-driver-id').value;
+        const obj = {
+            name: decodeHtmlEntities(document.getElementById('driverName').value.trim()),
+            phone: document.getElementById('driverPhone').value.trim()
+        };
+        if (!obj.name || !obj.phone) return;
+        try {
+            if (editId) {
+                await updateDoc(cdoc('drivers', editId), obj);
+                showToast('פרטי הנהג עודכנו בהצלחה!');
+            } else {
+                await addDoc(ccol('drivers'), obj);
+                showToast('הנהג נוסף בהצלחה!');
+            }
+            closeFormModal('driver-modal');
+        } catch (err) {
+            console.error(err);
+            await showAlert('שגיאה בשמירת הנהג: ' + err.message + '\n\nאם מדובר בחוסר הרשאה - יש לפרסם את חוקי Firestore המעודכנים.', 'שגיאה');
+        }
+    });
+
+    window.editDriver = function(id) {
+        const d = driversData.find(x => x.id === id);
+        if (!d) return;
+        document.getElementById('editing-driver-id').value = d.id;
+        document.getElementById('driverName').value = d.name;
+        document.getElementById('driverPhone').value = d.phone;
+        document.getElementById('driver-modal-title').innerText = 'עדכון פרטי נהג';
+        document.getElementById('save-driver-btn').innerText = 'עדכן נהג';
+        document.getElementById('delete-driver-btn').classList.remove('hidden');
+        document.getElementById('driver-modal').classList.remove('hidden');
+    };
+
+    window.deleteDriverFromModal = async function() {
+        const id = document.getElementById('editing-driver-id').value;
+        if (id && await deleteDocRef('drivers', id)) closeFormModal('driver-modal');
+    };
+
     window.deletePlayerFromModal = async function() {
         const id = document.getElementById('editing-player-doc-id').value;
         if (id && await deleteDocRef('players', id)) cancelPlayerEdit();
@@ -4928,6 +5620,7 @@
         document.getElementById('save-schedule-btn').innerText = 'הוסף אירוע ללו"ז';
         document.getElementById('cancel-schedule-btn').classList.add('hidden');
         document.getElementById('delete-schedule-btn').classList.add('hidden');
+        document.getElementById('cancel-event-btn').classList.add('hidden');
         document.getElementById('schedule-modal').classList.add('hidden');
     };
 
@@ -5057,6 +5750,7 @@
     }
 
     window.renderSchedules = function() {
+        renderSecretary();
         renderTicker();
         renderReports();
         const tbody = document.getElementById('schedules-table-body');
@@ -5075,8 +5769,8 @@
 
             const c = scheduleChange(s);
             return `
-                <tr class="${c ? 'row-changed' : ''}">
-                    <td>${c ? c.date : ''}<strong>${getDayOfWeek(s.date)}</strong><br><span style="font-size:12px; color:#64748b;">${formatDate(s.date).slice(0, 5)}</span>${c ? c.badge : ''}</td>
+                <tr class="${c ? 'row-changed' : ''}${s.cancelled ? ' row-cancelled' : ''}">
+                    <td>${c ? c.date : ''}<strong>${getDayOfWeek(s.date)}</strong><br><span style="font-size:12px; color:#64748b;">${formatDate(s.date).slice(0, 5)}</span>${c ? c.badge : ''}${s.cancelled ? CANCEL_BADGE : ''}</td>
                     <td class="sched-hours">${c ? c.time : ''}<span dir="ltr">${s.startTime}</span><br><span dir="ltr">${s.endTime}</span></td>
                     <td>${c ? c.venue : ''}${combinedLocation}${(s.isAway || s.venueName === 'משחק חוץ') ? navLinksHtml(s.address) + transportLineHtml(true, s.needsTransport, s.transportTime) : ''}</td>
                     <td>
@@ -5108,6 +5802,7 @@
     };
 
     window.renderPlayers = function() {
+        renderSecretary();
         renderReports();
         const tbody = document.getElementById('players-table-body');
         if (!tbody) return;
@@ -5226,8 +5921,8 @@
 
             const c = scheduleChange(s);
             return `
-                <tr class="${c ? 'row-changed' : ''}">
-                    <td>${c ? c.date : ''}<strong>${getDayOfWeek(s.date)}</strong><br><span style="font-size:12px; color:#64748b;">${formatDate(s.date).slice(0, 5)}</span>${c ? c.badge : ''}</td>
+                <tr class="${c ? 'row-changed' : ''}${s.cancelled ? ' row-cancelled' : ''}">
+                    <td>${c ? c.date : ''}<strong>${getDayOfWeek(s.date)}</strong><br><span style="font-size:12px; color:#64748b;">${formatDate(s.date).slice(0, 5)}</span>${c ? c.badge : ''}${s.cancelled ? CANCEL_BADGE : ''}</td>
                     <td>${c ? c.time : ''}${s.startTime} - ${s.endTime}</td>
                     <td>${c ? c.venue : ''}${combinedLocation}${(s.isAway || s.venueName === 'משחק חוץ') ? navLinksHtml(s.address) + transportLineHtml(true, s.needsTransport, s.transportTime) : ''}</td>
                 </tr>
@@ -5278,7 +5973,7 @@
         const options = sortTeamsByAge(visibleTeams).map(t => `<option value="${escAttr(t.name)}">${decodeHtmlEntities(t.name)}</option>`).join('');
 
         const prevPlayerFilter = (document.getElementById('player-filter-team') || {}).value;
-        ['player-team-select', 'schedule-team-select', 'player-filter-team', 'schedule-filter-team', 'game-team-select', 'games-filter-team', 'pdf-import-team-select', 'excel-import-team-select'].forEach(id => {
+        ['player-team-select', 'schedule-team-select', 'player-filter-team', 'schedule-filter-team', 'game-team-select', 'games-filter-team', 'pdf-import-team-select', 'excel-import-team-select', 'sec-team'].forEach(id => {
             const sel = document.getElementById(id);
             if (!sel) return;
             const cur = sel.value;
@@ -5361,6 +6056,11 @@
         document.getElementById('view-games').classList.toggle('hidden', tab !== 'games');
         document.getElementById('view-player').classList.toggle('hidden', tab !== 'player');
         document.getElementById('view-reports').classList.toggle('hidden', tab !== 'reports');
+        document.getElementById('view-drivers').classList.toggle('hidden', tab !== 'drivers');
+        document.getElementById('nav-drivers').classList.toggle('active', tab === 'drivers');
+        document.getElementById('view-secretary').classList.toggle('hidden', tab !== 'secretary');
+        document.getElementById('nav-secretary').classList.toggle('active', tab === 'secretary');
+        if (tab === 'secretary') renderSecretary();
         document.getElementById('nav-reports').classList.toggle('active', tab === 'reports');
         if (tab === 'reports') renderReports();
 
@@ -5382,10 +6082,10 @@
         const teams = sortTeamsByAge(teamsData).map(t => t.name);
         const linked = new Set(gamesData.filter(g => g.scheduleId).map(g => g.scheduleId));
         const gameEvents = [
-            ...gamesData.map(g => ({ team: g.team, date: g.date })),
-            ...schedulesData.filter(s => isGameEntry(s) && !linked.has(s.id)).map(s => ({ team: s.team, date: s.date }))
+            ...gamesData.filter(g => !g.cancelled).map(g => ({ team: g.team, date: g.date })),
+            ...schedulesData.filter(s => !s.cancelled && isGameEntry(s) && !linked.has(s.id)).map(s => ({ team: s.team, date: s.date }))
         ];
-        const trainEvents = schedulesData.filter(s => !isGameEntry(s)).map(s => ({ team: s.team, date: s.date }));
+        const trainEvents = schedulesData.filter(s => !s.cancelled && !isGameEntry(s)).map(s => ({ team: s.team, date: s.date }));
 
         const year = fillSeasonSelect(sel, [...gameEvents, ...trainEvents].map(e => e.date));
 
@@ -5478,7 +6178,7 @@
     };
 
     window.switchAdminSubTab = function(subTab) {
-        ['teams', 'venues', 'admins', 'coaches'].forEach(st => {
+        ['teams', 'venues', 'admins', 'coaches', 'drivers', 'officials'].forEach(st => {
             document.getElementById(`admin-sub-${st}`).classList.toggle('hidden', st !== subTab);
             document.getElementById(`subnav-${st}`).classList.toggle('active', st === subTab);
         });

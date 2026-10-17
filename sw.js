@@ -1,4 +1,4 @@
-const CACHE = 'club-pwa-v80'; // להעלות גרסה בכל שינוי בקבצים
+const CACHE = 'club-pwa-v87'; // להעלות גרסה בכל שינוי בקבצים
 const ASSETS = [
   './',
   './manifest.json',
